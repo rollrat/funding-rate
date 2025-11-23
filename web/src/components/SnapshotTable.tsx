@@ -384,6 +384,11 @@ const SnapshotTable = ({ snapshots }: SnapshotTableProps) => {
     }
   }, []);
 
+  // spot 데이터가 있는 항목이 하나라도 있는지 확인
+  const hasSpotData = useMemo(() => {
+    return snapshots.some((snapshot) => snapshot.spot !== null);
+  }, [snapshots]);
+
   // 가상화 설정
   const rowVirtualizer = useVirtualizer({
     count: sortedSnapshots.length,
@@ -392,14 +397,6 @@ const SnapshotTable = ({ snapshots }: SnapshotTableProps) => {
     overscan: 10, // 화면 밖에 미리 렌더링할 row 수
     measureElement: (element) => element?.getBoundingClientRect().height ?? 40,
   });
-
-  if (sortedSnapshots.length === 0) {
-    return (
-      <Center py="xl">
-        <Text c="dimmed">데이터가 없습니다</Text>
-      </Center>
-    );
-  }
 
   const virtualItems = rowVirtualizer.getVirtualItems();
   const totalSize = rowVirtualizer.getTotalSize();
@@ -412,10 +409,13 @@ const SnapshotTable = ({ snapshots }: SnapshotTableProps) => {
         )
       : 0;
 
-  // spot 데이터가 있는 항목이 하나라도 있는지 확인
-  const hasSpotData = useMemo(() => {
-    return snapshots.some((snapshot) => snapshot.spot !== null);
-  }, [snapshots]);
+  if (sortedSnapshots.length === 0) {
+    return (
+      <Center py="xl">
+        <Text c="dimmed">데이터가 없습니다</Text>
+      </Center>
+    );
+  }
 
   return (
     <div style={{ height: "100%", overflow: "auto" }} ref={parentRef}>
