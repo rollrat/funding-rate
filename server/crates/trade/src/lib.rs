@@ -1,6 +1,6 @@
 mod exchange;
 
-pub use exchange::{AssetExchange, BithumbAssetClient};
+pub use exchange::{AssetExchange, BinanceClient, BithumbClient, FeeExchange, OrderBookExchange};
 
 use std::sync::Once;
 

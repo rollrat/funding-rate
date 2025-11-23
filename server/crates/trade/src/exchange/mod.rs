@@ -4,6 +4,7 @@ use interface::{
     Asset, DepositWithdrawalFee, ExchangeError, ExchangeId, FeeInfo, MarketType, OrderBook,
 };
 
+pub mod binance;
 pub mod bithumb;
 
 #[async_trait]
@@ -38,4 +39,5 @@ pub trait FeeExchange: Send + Sync {
     ) -> Result<DepositWithdrawalFee, ExchangeError>;
 }
 
-pub use bithumb::{BithumbAssetClient, BithumbOrderBookClient};
+pub use binance::BinanceClient;
+pub use bithumb::BithumbClient;

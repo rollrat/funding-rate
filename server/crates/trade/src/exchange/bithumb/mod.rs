@@ -50,5 +50,31 @@ pub fn has_api_credentials() -> bool {
     env::var("BITHUMB_API_KEY").is_ok() && env::var("BITHUMB_API_SECRET").is_ok()
 }
 
-pub use asset::BithumbAssetClient;
-pub use orderbook::BithumbOrderBookClient;
+/// Bithumb 통합 클라이언트 (Orderbook, Asset, Fee 모두 지원)
+#[derive(Clone)]
+pub struct BithumbClient {
+    pub(crate) http: reqwest::Client,
+    pub(crate) api_key: Option<String>,
+    pub(crate) api_secret: Option<String>,
+}
+
+impl BithumbClient {
+    /// 공개 API만 사용하는 경우 (Orderbook 등)
+    pub fn new() -> Self {
+        Self {
+            http: reqwest::Client::new(),
+            api_key: None,
+            api_secret: None,
+        }
+    }
+
+    /// 인증이 필요한 API를 사용하는 경우 (Asset, Fee 등)
+    pub fn with_credentials() -> Result<Self, ExchangeError> {
+        let (api_key, api_secret) = get_api_credentials()?;
+        Ok(Self {
+            http: reqwest::Client::new(),
+            api_key: Some(api_key),
+            api_secret: Some(api_secret),
+        })
+    }
+}

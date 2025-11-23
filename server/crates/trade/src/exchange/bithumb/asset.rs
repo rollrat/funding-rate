@@ -5,26 +5,7 @@ use serde::Deserialize;
 use interface::{Asset, ExchangeId};
 
 use super::super::{AssetExchange, ExchangeError};
-use super::{generate_jwt_token, get_api_credentials, BASE_URL};
-
-#[derive(Clone)]
-pub struct BithumbAssetClient {
-    http: reqwest::Client,
-    api_key: String,
-    api_secret: String,
-}
-
-impl BithumbAssetClient {
-    pub fn new() -> Result<Self, ExchangeError> {
-        let (api_key, api_secret) = get_api_credentials()?;
-
-        Ok(Self {
-            http: reqwest::Client::new(),
-            api_key,
-            api_secret,
-        })
-    }
-}
+use super::{generate_jwt_token, BithumbClient, BASE_URL};
 
 #[derive(Debug, Deserialize)]
 struct BithumbAccount {
@@ -43,18 +24,29 @@ struct BithumbAccount {
 }
 
 #[async_trait]
-impl AssetExchange for BithumbAssetClient {
+impl AssetExchange for BithumbClient {
     fn id(&self) -> ExchangeId {
         ExchangeId::Bithumb
     }
 
     async fn fetch_assets(&self) -> Result<Vec<Asset>, ExchangeError> {
+        let api_key = self.api_key.as_ref().ok_or_else(|| {
+            ExchangeError::Other(
+                "API key not set. Use BithumbClient::with_credentials()".to_string(),
+            )
+        })?;
+        let api_secret = self.api_secret.as_ref().ok_or_else(|| {
+            ExchangeError::Other(
+                "API secret not set. Use BithumbClient::with_credentials()".to_string(),
+            )
+        })?;
+
         // 신버전 API: GET /v1/accounts
         let endpoint = "/v1/accounts";
         let url = format!("{BASE_URL}{}", endpoint);
 
         // JWT 토큰 생성 (파라미터가 없으므로 query_hash 없음)
-        let jwt_token = generate_jwt_token(&self.api_key, &self.api_secret)?;
+        let jwt_token = generate_jwt_token(api_key, api_secret)?;
         let authorization_token = format!("Bearer {}", jwt_token);
 
         let response = self
@@ -141,7 +133,7 @@ mod tests {
     fn test_bithumb_asset_client_id() {
         skip_if_no_credentials();
 
-        let client = BithumbAssetClient::new().expect("Failed to create BithumbAssetClient");
+        let client = BithumbClient::with_credentials().expect("Failed to create BithumbClient");
         assert_eq!(client.id(), ExchangeId::Bithumb);
     }
 
@@ -149,7 +141,7 @@ mod tests {
     async fn test_fetch_assets_bithumb() {
         skip_if_no_credentials();
 
-        let client = BithumbAssetClient::new().expect("Failed to create BithumbAssetClient");
+        let client = BithumbClient::with_credentials().expect("Failed to create BithumbClient");
         let result = client.fetch_assets().await;
 
         match result {

@@ -5,7 +5,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 use interface::{Asset, UnifiedSnapshot};
 
 // lib.rs에서 자동으로 dotenv가 로드됨
-use trade::{AssetExchange, BithumbAssetClient};
+use trade::{AssetExchange, BinanceClient, BithumbClient, FeeExchange, OrderBookExchange};
 
 const ORACLE_SERVER_URL: &str = "http://localhost:12090";
 
@@ -55,8 +55,7 @@ fn print_unified_snapshots(snapshots: &[UnifiedSnapshot]) {
 }
 
 async fn fetch_bithumb_assets() -> eyre::Result<Vec<Asset>> {
-    let client = BithumbAssetClient::new()
-        .map_err(|e| eyre::eyre!("BithumbAssetClient 생성 실패: {}", e))?;
+    let client = BithumbClient::new();
     let assets = client
         .fetch_assets()
         .await

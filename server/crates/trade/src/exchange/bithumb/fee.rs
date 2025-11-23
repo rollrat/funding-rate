@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 use interface::{DepositWithdrawalFee, ExchangeId, FeeInfo, MarketType};
 
 use super::super::FeeExchange;
-use super::{BithumbOrderBookClient, BASE_URL};
+use super::{BithumbClient, BASE_URL};
 
 const FEE_API_URL: &str = "/v2/fee/inout/ALL";
 
@@ -47,7 +47,7 @@ async fn init_fee_cache() -> Arc<RwLock<HashMap<String, DepositWithdrawalFee>>> 
         .clone()
 }
 
-impl BithumbOrderBookClient {
+impl BithumbClient {
     /// 입출금 수수료 캐시 초기화 및 업데이트
     pub async fn refresh_deposit_withdrawal_fees(
         &self,
@@ -123,7 +123,7 @@ impl BithumbOrderBookClient {
 }
 
 #[async_trait]
-impl FeeExchange for BithumbOrderBookClient {
+impl FeeExchange for BithumbClient {
     fn id(&self) -> ExchangeId {
         ExchangeId::Bithumb
     }
@@ -160,7 +160,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_refresh_deposit_withdrawal_fees() {
-        let client = BithumbOrderBookClient::new();
+        let client = BithumbClient::new();
         let result = client.refresh_deposit_withdrawal_fees().await;
 
         match result {
@@ -196,7 +196,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_deposit_withdrawal_fee() {
-        let client = BithumbOrderBookClient::new();
+        let client = BithumbClient::new();
 
         // 먼저 캐시 초기화
         let _ = client.refresh_deposit_withdrawal_fees().await;

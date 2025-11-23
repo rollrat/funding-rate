@@ -5,21 +5,9 @@ use serde::Deserialize;
 use interface::{ExchangeId, OrderBook, OrderBookEntry};
 
 use super::super::{ExchangeError, OrderBookExchange};
-use super::BASE_URL;
+use super::{BithumbClient, BASE_URL};
 
-/// Bithumb Orderbook 클라이언트 (공개 API, 인증 불필요)
-#[derive(Clone)]
-pub struct BithumbOrderBookClient {
-    http: reqwest::Client,
-}
-
-impl BithumbOrderBookClient {
-    pub fn new() -> Self {
-        Self {
-            http: reqwest::Client::new(),
-        }
-    }
-
+impl BithumbClient {
     /// 심볼을 Bithumb 형식으로 변환
     /// 예: "BTC-KRW" -> "BTC_KRW"
     fn normalize_symbol(&self, symbol: &str) -> String {
@@ -46,7 +34,7 @@ struct BithumbOrderBookEntry {
 }
 
 #[async_trait]
-impl OrderBookExchange for BithumbOrderBookClient {
+impl OrderBookExchange for BithumbClient {
     fn id(&self) -> ExchangeId {
         ExchangeId::Bithumb
     }
@@ -163,7 +151,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_orderbook_bithumb() {
-        let client = BithumbOrderBookClient::new();
+        let client = BithumbClient::new();
         let result = client.fetch_orderbook("BTC-KRW").await;
 
         match result {
