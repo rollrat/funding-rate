@@ -1,0 +1,7 @@
+target/
+.git/
+.gitignore
+*.log
+README.md
+rustfmt.toml
+

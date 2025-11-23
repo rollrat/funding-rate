@@ -1,5 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
+use color_eyre::eyre;
+use tracing::info;
 use tracing_subscriber::{fmt, EnvFilter};
 
 mod collector;
@@ -7,25 +9,47 @@ mod exchange;
 mod model;
 mod server;
 
-use crate::exchange::{BinanceClient, BybitClient, OkxClient, PerpExchange};
+use crate::exchange::{
+    BinanceClient, BinanceSpotClient, BitgetClient, BitgetSpotClient, BybitClient, BybitSpotClient,
+    OkxClient, OkxSpotClient, PerpExchange, SpotExchange,
+};
 use crate::server::AppState;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> eyre::Result<()> {
+    // init error reporting
+    color_eyre::install()?;
+
     // init logging
     fmt().with_env_filter(EnvFilter::from_default_env()).init();
 
+    info!("서버 시작 중...");
+
     let state = Arc::new(AppState::new());
 
-    // set up exchanges
-    let binance: Arc<dyn PerpExchange> = Arc::new(BinanceClient::new());
-    let bybit: Arc<dyn PerpExchange> = Arc::new(BybitClient::new());
-    let okx: Arc<dyn PerpExchange> = Arc::new(OkxClient::new());
+    // set up perp exchanges
+    let perp_exchanges: Vec<Arc<dyn PerpExchange>> = vec![
+        Arc::new(BinanceClient::new()),
+        Arc::new(BybitClient::new()),
+        Arc::new(OkxClient::new()),
+        Arc::new(BitgetClient::new()),
+    ];
 
-    let exchanges = vec![binance, bybit, okx];
+    // set up spot exchanges
+    let spot_exchanges: Vec<Arc<dyn SpotExchange>> = vec![
+        Arc::new(BinanceSpotClient::new()),
+        Arc::new(BybitSpotClient::new()),
+        Arc::new(OkxSpotClient::new()),
+        Arc::new(BitgetSpotClient::new()),
+    ];
 
     // start background collector
-    collector::start_collect_loop(exchanges, state.clone(), Duration::from_secs(10));
+    collector::start_collect_loop(
+        perp_exchanges,
+        spot_exchanges,
+        state.clone(),
+        Duration::from_secs(10),
+    );
 
     // start HTTP server on 8080
     server::serve(state, 12090).await?;
