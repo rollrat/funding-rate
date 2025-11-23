@@ -18,9 +18,9 @@ pub const SAPI_BASE_URL: &str = "https://api.binance.com";
 /// Binance 통합 클라이언트 (Orderbook, Asset, Fee 모두 지원)
 #[derive(Clone)]
 pub struct BinanceClient {
-    pub(crate) http: reqwest::Client,
-    pub(crate) api_key: Option<String>,
-    pub(crate) api_secret: Option<String>,
+    pub http: reqwest::Client,
+    pub api_key: Option<String>,
+    pub api_secret: Option<String>,
 }
 
 impl BinanceClient {

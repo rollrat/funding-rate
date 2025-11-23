@@ -32,4 +32,5 @@ chrono = { workspace = true }
 ctor = { workspace = true }
 jsonwebtoken = { workspace = true }
 uuid = { workspace = true }
+structopt = { workspace = true }
 

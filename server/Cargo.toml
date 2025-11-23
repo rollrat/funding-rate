@@ -27,3 +27,4 @@ hex = "0.4"
 ctor = "0.2"
 jsonwebtoken = "9"
 uuid = { version = "1", features = ["v4"] }
+structopt = { version = "0.3", features = ["default"] }
