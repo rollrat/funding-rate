@@ -34,8 +34,8 @@ function App() {
 
   const fetchSnapshots = async () => {
     try {
-      // const response = await fetch("https://koromo.cc/perp/unified-snapshots");
-      const response = await fetch("http://localhost:12090/unified-snapshots");
+      const response = await fetch("https://koromo.cc/perp/unified-snapshots");
+      // const response = await fetch("http://localhost:12090/unified-snapshots");
       if (!response.ok) {
         throw new Error("데이터를 가져오는데 실패했습니다");
       }
