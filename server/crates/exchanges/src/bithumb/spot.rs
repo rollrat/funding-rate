@@ -4,24 +4,10 @@ use async_trait::async_trait;
 use chrono::Utc;
 use serde::Deserialize;
 
+use crate::{bithumb::BithumbClient, ExchangeError, SpotExchange};
 use interface::{Currency, ExchangeId, SpotSnapshot};
 
-use super::{ExchangeError, SpotExchange};
-
 const BASE_URL: &str = "https://api.bithumb.com";
-
-#[derive(Clone)]
-pub struct BithumbSpotClient {
-    http: reqwest::Client,
-}
-
-impl BithumbSpotClient {
-    pub fn new() -> Self {
-        Self {
-            http: reqwest::Client::new(),
-        }
-    }
-}
 
 #[derive(Debug, Deserialize)]
 struct BithumbResponse {
@@ -38,7 +24,7 @@ struct BithumbTicker {
 }
 
 #[async_trait]
-impl SpotExchange for BithumbSpotClient {
+impl SpotExchange for BithumbClient {
     fn id(&self) -> ExchangeId {
         ExchangeId::Bithumb
     }
@@ -111,13 +97,13 @@ mod tests {
 
     #[test]
     fn test_bithumb_spot_client_id() {
-        let client = BithumbSpotClient::new();
+        let client = BithumbClient::new();
         assert_eq!(client.id(), ExchangeId::Bithumb);
     }
 
     #[tokio::test]
     async fn test_fetch_all_bithumb_spot() {
-        let client = BithumbSpotClient::new();
+        let client = BithumbClient::new();
         let result = client.fetch_all().await;
 
         match result {

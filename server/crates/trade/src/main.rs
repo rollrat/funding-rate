@@ -5,7 +5,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 use interface::{Asset, UnifiedSnapshot};
 
 // lib.rs에서 자동으로 dotenv가 로드됨
-use trade::{AssetExchange, BinanceClient, BithumbClient, FeeExchange, OrderBookExchange};
+use exchanges::{AssetExchange, BinanceClient, BithumbClient, FeeExchange, OrderBookExchange};
 
 const ORACLE_SERVER_URL: &str = "http://localhost:12090";
 

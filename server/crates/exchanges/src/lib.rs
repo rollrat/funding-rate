@@ -2,10 +2,29 @@ use async_trait::async_trait;
 
 use interface::{
     Asset, DepositWithdrawalFee, ExchangeError, ExchangeId, FeeInfo, MarketType, OrderBook,
+    PerpSnapshot, SpotSnapshot,
 };
 
 pub mod binance;
+pub mod bitget;
 pub mod bithumb;
+pub mod bybit;
+pub mod exchange_rate;
+pub mod okx;
+
+#[async_trait]
+pub trait PerpExchange: Send + Sync {
+    fn id(&self) -> ExchangeId;
+
+    async fn fetch_all(&self) -> Result<Vec<PerpSnapshot>, ExchangeError>;
+}
+
+#[async_trait]
+pub trait SpotExchange: Send + Sync {
+    fn id(&self) -> ExchangeId;
+
+    async fn fetch_all(&self) -> Result<Vec<SpotSnapshot>, ExchangeError>;
+}
 
 #[async_trait]
 pub trait AssetExchange: Send + Sync {
@@ -39,5 +58,9 @@ pub trait FeeExchange: Send + Sync {
     ) -> Result<DepositWithdrawalFee, ExchangeError>;
 }
 
+// Convenience re-exports
 pub use binance::BinanceClient;
+pub use bitget::BitgetClient;
 pub use bithumb::BithumbClient;
+pub use bybit::BybitClient;
+pub use okx::OkxClient;

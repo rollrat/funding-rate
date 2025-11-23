@@ -134,7 +134,6 @@ impl OrderBookExchange for BithumbClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::exchange::ExchangeError;
 
     fn handle_api_error(e: &ExchangeError) {
         if let ExchangeError::Other(msg) = e {

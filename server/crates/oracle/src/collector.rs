@@ -3,10 +3,9 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::time::sleep;
 use tracing::{info, warn};
 
-use crate::exchange::{PerpExchange, SpotExchange};
-use crate::exchange_rate::fetch_all_exchange_rates;
-use interface::{ExchangeId, PerpData, PerpSnapshot, SpotData, SpotSnapshot, UnifiedSnapshot};
 use crate::server::AppState;
+use exchanges::{exchange_rate::fetch_all_exchange_rates, PerpExchange, SpotExchange};
+use interface::{ExchangeId, PerpData, PerpSnapshot, SpotData, SpotSnapshot, UnifiedSnapshot};
 
 pub fn start_collect_loop(
     perp_exchanges: Vec<Arc<dyn PerpExchange>>,

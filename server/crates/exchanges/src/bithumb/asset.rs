@@ -105,9 +105,9 @@ impl AssetExchange for BithumbClient {
 
 #[cfg(test)]
 mod tests {
+    use crate::bithumb::has_api_credentials;
+
     use super::*;
-    use crate::exchange::bithumb::has_api_credentials;
-    use crate::exchange::ExchangeError;
 
     fn skip_if_no_credentials() {
         if !has_api_credentials() {

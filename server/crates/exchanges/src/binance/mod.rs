@@ -9,6 +9,8 @@ use super::ExchangeError;
 pub mod asset;
 pub mod fee;
 pub mod orderbook;
+pub mod perp;
+pub mod spot;
 
 pub const BASE_URL: &str = "https://api.binance.com";
 pub const SAPI_BASE_URL: &str = "https://api.binance.com";

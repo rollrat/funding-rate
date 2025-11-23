@@ -6,15 +6,14 @@ use futures::stream::{self, StreamExt};
 use serde::Deserialize;
 use tracing;
 
-use interface::{Currency, ExchangeId, PerpSnapshot, SpotSnapshot};
-
-use super::{ExchangeError, PerpExchange, SpotExchange};
+use crate::{ExchangeError, PerpExchange};
+use interface::{Currency, ExchangeId, PerpSnapshot};
 
 const BASE_URL: &str = "https://api.bitget.com";
 
 #[derive(Clone)]
 pub struct BitgetClient {
-    http: reqwest::Client,
+    pub(crate) http: reqwest::Client,
 }
 
 impl BitgetClient {
@@ -247,81 +246,6 @@ impl PerpExchange for BitgetClient {
                 vol_24h_usd,
                 funding_rate,
                 next_funding_time,
-                updated_at: now,
-            });
-        }
-
-        Ok(out)
-    }
-}
-
-#[derive(Clone)]
-pub struct BitgetSpotClient {
-    http: reqwest::Client,
-}
-
-impl BitgetSpotClient {
-    pub fn new() -> Self {
-        Self {
-            http: reqwest::Client::new(),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct BitgetSpotTicker {
-    symbol: String,
-    #[serde(default)]
-    close: String, // last price
-    #[serde(default)]
-    usdt_volume: String, // 24h volume in USDT
-}
-
-#[async_trait]
-impl SpotExchange for BitgetSpotClient {
-    fn id(&self) -> ExchangeId {
-        ExchangeId::Bitget
-    }
-
-    async fn fetch_all(&self) -> Result<Vec<SpotSnapshot>, ExchangeError> {
-        let tickers_url = format!("{BASE_URL}/api/spot/v1/market/tickers");
-        let tickers_response: BitgetResponse<Vec<BitgetSpotTicker>> =
-            self.http.get(&tickers_url).send().await?.json().await?;
-
-        if tickers_response.code != "00000" {
-            return Err(ExchangeError::Other(format!(
-                "Bitget API error (spot tickers): {} - {}",
-                tickers_response.code, tickers_response.msg
-            )));
-        }
-
-        let now = Utc::now();
-        let mut out = Vec::new();
-
-        for ticker in tickers_response.data {
-            if !ticker.symbol.ends_with("USDT") {
-                continue; // USDT 페어만
-            }
-
-            let price: f64 = match ticker.close.parse() {
-                Ok(v) => v,
-                Err(_) => continue,
-            };
-
-            // price가 0보다 큰 경우만 추가
-            if price <= 0.0 {
-                continue;
-            }
-
-            let vol_24h_usd: f64 = ticker.usdt_volume.parse().unwrap_or(0.0);
-
-            out.push(SpotSnapshot {
-                exchange: ExchangeId::Bitget,
-                symbol: ticker.symbol,
-                currency: Currency::USDT,
-                price,
-                vol_24h_usd,
                 updated_at: now,
             });
         }

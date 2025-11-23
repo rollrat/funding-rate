@@ -8,8 +8,9 @@ use uuid::Uuid;
 use super::ExchangeError;
 
 pub mod asset;
-mod fee;
+pub mod fee;
 pub mod orderbook;
+pub mod spot;
 
 pub const BASE_URL: &str = "https://api.bithumb.com";
 

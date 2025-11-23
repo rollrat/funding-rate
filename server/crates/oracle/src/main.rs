@@ -4,9 +4,9 @@ use color_eyre::eyre;
 use tracing::info;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use oracle::exchange::{
-    BinanceClient, BinanceSpotClient, BitgetClient, BitgetSpotClient, BithumbSpotClient,
-    BybitClient, BybitSpotClient, OkxClient, OkxSpotClient, PerpExchange, SpotExchange,
+use exchanges::{
+    bithumb::BithumbClient, BinanceClient, BitgetClient, BybitClient, OkxClient, PerpExchange,
+    SpotExchange,
 };
 use oracle::server::AppState;
 
@@ -32,11 +32,11 @@ async fn main() -> eyre::Result<()> {
 
     // set up spot exchanges
     let spot_exchanges: Vec<Arc<dyn SpotExchange>> = vec![
-        Arc::new(BinanceSpotClient::new()),
-        Arc::new(BybitSpotClient::new()),
-        Arc::new(OkxSpotClient::new()),
-        Arc::new(BitgetSpotClient::new()),
-        Arc::new(BithumbSpotClient::new()),
+        Arc::new(BinanceClient::new()),
+        Arc::new(BybitClient::new()),
+        Arc::new(OkxClient::new()),
+        Arc::new(BitgetClient::new()),
+        Arc::new(BithumbClient::new()),
     ];
 
     // start background collector

@@ -9,23 +9,22 @@ use serde_json::json;
 use tokio::sync::RwLock;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 
-use interface::{Currency, ExchangeId, PerpSnapshot, SpotSnapshot};
-
-use super::{ExchangeError, PerpExchange, SpotExchange};
+use crate::{ExchangeError, PerpExchange};
+use interface::{Currency, ExchangeId, PerpSnapshot};
 
 const BASE_URL: &str = "https://www.okx.com";
 const WS_URL: &str = "wss://ws.okx.com:8443/ws/v5/public";
 
 #[derive(Debug, Clone)]
-struct FundingInfo {
+pub(crate) struct FundingInfo {
     funding_rate: f64,
     next_funding_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone)]
 pub struct OkxClient {
-    http: reqwest::Client,
-    funding_cache: Arc<RwLock<HashMap<String, FundingInfo>>>,
+    pub(crate) http: reqwest::Client,
+    pub(crate) funding_cache: Arc<RwLock<HashMap<String, FundingInfo>>>,
 }
 
 impl OkxClient {
@@ -372,84 +371,6 @@ impl PerpExchange for OkxClient {
                 vol_24h_usd,
                 funding_rate,
                 next_funding_time,
-                updated_at: now,
-            });
-        }
-
-        Ok(out)
-    }
-}
-
-#[derive(Clone)]
-pub struct OkxSpotClient {
-    http: reqwest::Client,
-}
-
-impl OkxSpotClient {
-    pub fn new() -> Self {
-        Self {
-            http: reqwest::Client::new(),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct OkxSpotTicker {
-    inst_id: String,
-    #[serde(default)]
-    last: String,
-    #[serde(default)]
-    vol_ccy_24h: String, // 24h volume in quote currency (USDT)
-}
-
-#[async_trait]
-impl SpotExchange for OkxSpotClient {
-    fn id(&self) -> ExchangeId {
-        ExchangeId::Okx
-    }
-
-    async fn fetch_all(&self) -> Result<Vec<SpotSnapshot>, ExchangeError> {
-        let tickers_url = format!("{BASE_URL}/api/v5/market/tickers?instType=SPOT");
-        let tickers_response: OkxResponse<Vec<OkxSpotTicker>> =
-            self.http.get(&tickers_url).send().await?.json().await?;
-
-        if tickers_response.code != "0" {
-            return Err(ExchangeError::Other(format!(
-                "OKX API error (spot tickers): {} - {}",
-                tickers_response.code, tickers_response.msg
-            )));
-        }
-
-        let now = Utc::now();
-        let mut out = Vec::new();
-
-        for ticker in tickers_response.data {
-            if !ticker.inst_id.ends_with("-USDT") {
-                continue; // USDT 페어만
-            }
-
-            let price: f64 = match ticker.last.parse() {
-                Ok(v) => v,
-                Err(_) => continue,
-            };
-
-            // price가 0보다 큰 경우만 추가
-            if price <= 0.0 {
-                continue;
-            }
-
-            let vol_24h_usd: f64 = ticker.vol_ccy_24h.parse().unwrap_or(0.0);
-
-            // OKX는 "BTC-USDT" 형식이므로 "BTCUSDT"로 변환
-            let symbol = ticker.inst_id.replace("-USDT", "USDT").replace("-", "");
-
-            out.push(SpotSnapshot {
-                exchange: ExchangeId::Okx,
-                symbol,
-                currency: Currency::USDT,
-                price,
-                vol_24h_usd,
                 updated_at: now,
             });
         }
