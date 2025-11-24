@@ -4,9 +4,7 @@
 use serde_json;
 use tracing::{info, warn};
 
-use super::super::super::trader::{
-    BinanceTrader, FuturesExchangeTrader, OrderResponse, SpotExchangeTrader,
-};
+use crate::trader::{BinanceTrader, FuturesExchangeTrader, OrderResponse, SpotExchangeTrader};
 use interface::ExchangeError;
 
 use super::super::state::ArbitrageState;

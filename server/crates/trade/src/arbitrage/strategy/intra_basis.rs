@@ -2,9 +2,9 @@ use interface::ExchangeError;
 use serde_json;
 use tracing::{info, warn};
 
-use super::super::super::trader::{BinanceTrader, OrderResponse};
 use super::super::state::ArbitrageState;
 use super::{StrategyMode, StrategyParams};
+use crate::trader::{BinanceTrader, OrderResponse};
 
 /// 단일 거래소(Binance) 안에서 스팟/선물 간 베이시스(가격 격차)를 이용해
 /// 델타-뉴트럴 포지션을 자동으로 관리하는 인트라(intra) 베이시스 아비트라지 전략.

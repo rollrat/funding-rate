@@ -24,6 +24,7 @@ dotenv = "0.15"
 sha2 = "0.10"
 hmac = "0.12"
 hex = "0.4"
+base64 = "0.21"
 ctor = "0.2"
 jsonwebtoken = "9"
 uuid = { version = "1", features = ["v4"] }
