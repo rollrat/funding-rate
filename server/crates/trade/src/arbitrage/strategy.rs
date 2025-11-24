@@ -42,12 +42,35 @@ pub enum LegExecutionPolicy {
     PostOnlyMaker,
 }
 
+use std::fmt;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StrategyMode {
+    /// 스팟 롱 + 선물 숏
+    Carry,
+    /// 스팟 숏 + 선물 롱
+    Reverse,
+    /// 시장 상황에 따라 자동 선택
+    Auto,
+}
+
+impl fmt::Display for StrategyMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            StrategyMode::Carry => "carry",
+            StrategyMode::Reverse => "reverse",
+            StrategyMode::Auto => "auto",
+        };
+        f.write_str(s)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct StrategyParams {
     /// 거래할 심볼 (예: "BTCUSDT", "ETHUSDT")
     pub symbol: String,
-    /// 전략 모드: "carry" (스팟 롱 + 선물 숏), "reverse" (스팟 숏 + 선물 롱), "auto" (자동 선택)
-    pub mode: String,
+    /// 전략 모드: carry (스팟 롱 + 선물 숏), reverse (스팟 숏 + 선물 롱), auto (자동 선택)
+    pub mode: StrategyMode,
     /// 진입 임계값 (basis points). 베이시스가 이 값 이상 벌어지면 포지션 진입
     /// 예: 2.0 bps = 0.02% = (선물 - 스팟) / 스팟 * 10000 >= 2.0
     pub entry_bps: f64,
@@ -75,7 +98,7 @@ impl Default for StrategyParams {
     fn default() -> Self {
         Self {
             symbol: "BTCUSDT".to_string(),
-            mode: "carry".to_string(),
+            mode: StrategyMode::Carry,
             entry_bps: 2.0,
             exit_bps: 0.2,
             notional: 100.0,

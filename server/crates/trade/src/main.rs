@@ -82,10 +82,14 @@ async fn run_arbitrage_test() -> eyre::Result<()> {
     info!("  Isolated: {}", params.isolated);
     info!("  Dry Run: {}", params.dry_run);
 
-    let _strategy =
+    let strategy =
         BasisArbitrageStrategy::new(params).map_err(|e| eyre::eyre!("전략 초기화 실패: {}", e))?;
 
     info!("전략이 성공적으로 초기화되었습니다.");
+
+    strategy.run_loop().await?;
+
+    info!("전략이 성공적으로 실행되었습니다.");
     info!("실제 실행을 위해서는 'run' 커맨드를 사용하세요.");
 
     Ok(())

@@ -6,7 +6,7 @@ use super::super::{
     binance_trader::{BinanceTrader, OrderResponse},
     state::ArbitrageState,
 };
-use super::StrategyParams;
+use super::{StrategyMode, StrategyParams};
 
 pub struct BasisArbitrageStrategy {
     trader: BinanceTrader,
@@ -375,12 +375,13 @@ impl BasisArbitrageStrategy {
                 }
             } else {
                 // 포지션이 없으면 진입 조건 확인
-                let should_open_carry = (self.params.mode == "carry" || self.params.mode == "auto")
-                    && basis_bps > self.params.entry_bps;
+                let should_open_carry =
+                    matches!(self.params.mode, StrategyMode::Carry | StrategyMode::Auto)
+                        && basis_bps > self.params.entry_bps;
 
-                let should_open_reverse = (self.params.mode == "reverse"
-                    || self.params.mode == "auto")
-                    && basis_bps < -self.params.entry_bps;
+                let should_open_reverse =
+                    matches!(self.params.mode, StrategyMode::Reverse | StrategyMode::Auto)
+                        && basis_bps < -self.params.entry_bps;
 
                 if should_open_carry {
                     info!("Entry condition met for CARRY. Opening position...");
