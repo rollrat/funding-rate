@@ -91,7 +91,7 @@ impl BinanceClient {
         // 한 번의 호출로 모든 코인의 네트워크 정보까지 포함해서 반환
         let endpoint = "/sapi/v1/capital/config/getall";
         let timestamp = get_timestamp();
-        let query_string = format!("timestamp={}", timestamp);
+        let query_string = format!("timestamp={}&recvWindow=50000", timestamp);
         let signature = generate_signature(&query_string, &api_secret);
         let url = format!(
             "{}{}?{}&signature={}",
@@ -223,7 +223,7 @@ impl BinanceClient {
         // GET /sapi/v1/asset/tradeFee
         let endpoint = "/sapi/v1/asset/tradeFee";
         let timestamp = get_timestamp();
-        let query_string = format!("timestamp={}", timestamp);
+        let query_string = format!("timestamp={}&recvWindow=50000", timestamp);
         let signature = generate_signature(&query_string, &api_secret);
         let url = format!(
             "{}{}?{}&signature={}",

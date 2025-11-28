@@ -44,7 +44,7 @@ impl AssetExchange for BinanceClient {
 
         // 쿼리 파라미터 생성
         let timestamp = get_timestamp();
-        let query_string = format!("timestamp={}", timestamp);
+        let query_string = format!("timestamp={}&recvWindow=50000", timestamp);
         let signature = generate_signature(&query_string, api_secret);
         let url = format!(
             "{}{}?{}&signature={}",

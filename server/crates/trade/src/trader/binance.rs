@@ -396,7 +396,7 @@ impl BinanceTrader {
 
         let endpoint = "/fapi/v2/balance";
         let timestamp = exchanges::binance::get_timestamp();
-        let query_string = format!("timestamp={}", timestamp);
+        let query_string = format!("timestamp={}&recvWindow=50000", timestamp);
         let signature = exchanges::binance::generate_signature(&query_string, api_secret);
 
         let url = format!(
@@ -610,7 +610,7 @@ impl BinanceTrader {
         let timestamp = exchanges::binance::get_timestamp();
         let qty_str = format!("{:.8}", quantity);
         let query_string = format!(
-            "symbol={}&side={}&type=MARKET&quantity={}&timestamp={}",
+            "symbol={}&side={}&type=MARKET&quantity={}&timestamp={}&recvWindow=50000",
             symbol, side, qty_str, timestamp
         );
         info!("place_spot_order query_string: {}", query_string);
@@ -671,7 +671,7 @@ impl BinanceTrader {
         let timestamp = exchanges::binance::get_timestamp();
         let qty_str = format!("{:.8}", quantity);
         let mut query_string = format!(
-            "symbol={}&side={}&type=MARKET&quantity={}&timestamp={}",
+            "symbol={}&side={}&type=MARKET&quantity={}&timestamp={}&recvWindow=50000",
             symbol, side, qty_str, timestamp
         );
 
@@ -737,7 +737,7 @@ impl BinanceTrader {
         let timestamp = exchanges::binance::get_timestamp();
         let margin_type = if isolated { "ISOLATED" } else { "CROSS" };
         let query_string = format!(
-            "symbol={}&marginType={}&timestamp={}",
+            "symbol={}&marginType={}&timestamp={}&recvWindow=50000",
             symbol, margin_type, timestamp
         );
         let signature = exchanges::binance::generate_signature(&query_string, api_secret);
@@ -770,7 +770,7 @@ impl BinanceTrader {
         let endpoint = "/fapi/v1/leverage";
         let timestamp = exchanges::binance::get_timestamp();
         let query_string = format!(
-            "symbol={}&leverage={}&timestamp={}",
+            "symbol={}&leverage={}&timestamp={}&recvWindow=50000",
             symbol, leverage, timestamp
         );
         let signature = exchanges::binance::generate_signature(&query_string, api_secret);
