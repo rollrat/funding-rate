@@ -633,6 +633,8 @@ impl BinanceTrader {
         let status = response.status();
         let response_text = response.text().await?;
 
+        info!("place_spot_order response: {}", response_text);
+
         if !status.is_success() {
             return Err(ExchangeError::Other(format!(
                 "Spot order API error: status {}, response: {}",
@@ -699,6 +701,8 @@ impl BinanceTrader {
 
         let status = response.status();
         let response_text = response.text().await?;
+
+        info!("place_futures_order response: {}", response_text);
 
         if !status.is_success() {
             return Err(ExchangeError::Other(format!(

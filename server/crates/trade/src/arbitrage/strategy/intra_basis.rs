@@ -1,6 +1,6 @@
 use interface::ExchangeError;
 use serde_json;
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 
 use super::super::state::ArbitrageState;
 use super::{StrategyMode, StrategyParams};
@@ -106,6 +106,94 @@ impl IntraBasisArbitrageStrategy {
             return 0.0;
         }
         (futures_mark - spot_price) / spot_price * 10000.0
+    }
+
+    /// 포지션 청산 시 PnL 계산 및 로깅
+    fn log_position_pnl(
+        &self,
+        state: &ArbitrageState,
+        spot_price: f64,
+        futures_mark: f64,
+        basis_bps: f64,
+    ) {
+        let open_basis = state.last_open_basis_bps.unwrap_or(0.0);
+        let close_basis = basis_bps;
+        let pair = &state.pair;
+
+        // 베이시스 변화로부터 이득 추정
+        // CARRY: 진입 시 basis > exit, 청산 시 basis <= exit
+        //   - 베이시스가 줄어들면 이득 (진입 basis - 청산 basis)
+        // REVERSE: 진입 시 basis < -entry, 청산 시 basis >= -exit
+        //   - 베이시스가 증가하면 이득 (청산 basis - 진입 basis)
+        let basis_change = match state.dir.as_deref() {
+            Some("carry") => open_basis - close_basis,   // 양수면 이득
+            Some("reverse") => close_basis - open_basis, // 양수면 이득
+            _ => 0.0,
+        };
+
+        // 베이시스 변화를 USDT 이득으로 환산
+        // basis_change (bps) = (basis_change / 10000) * spot_price * 수량
+        let basis_pnl_usdt = (basis_change / 10000.0) * spot_price * pair.spot_order_qty;
+
+        // 더 정확한 계산: 스팟과 선물 각각의 가격 변화
+        // 진입 시점 가격 추정 (현재 가격과 베이시스로 역산)
+        let open_spot_price = spot_price; // 간단히 현재 가격 사용
+        let open_futures_price = open_spot_price * (1.0 + open_basis / 10000.0);
+
+        // CARRY: 스팟 롱 + 선물 숏
+        //   스팟 이득 = (현재_spot - 진입_spot) * spot_qty
+        //   선물 이득 = (진입_fut - 현재_fut) * fut_qty
+        // REVERSE: 스팟 숏 + 선물 롱
+        //   스팟 이득 = (진입_spot - 현재_spot) * spot_qty
+        //   선물 이득 = (현재_fut - 진입_fut) * fut_qty
+        let (spot_pnl, futures_pnl) = match state.dir.as_deref() {
+            Some("carry") => {
+                let spot_pnl = (spot_price - open_spot_price) * pair.spot_order_qty;
+                let futures_pnl = (open_futures_price - futures_mark) * pair.fut_order_qty;
+                (spot_pnl, futures_pnl)
+            }
+            Some("reverse") => {
+                let spot_pnl = (open_spot_price - spot_price) * pair.spot_order_qty;
+                let futures_pnl = (futures_mark - open_futures_price) * pair.fut_order_qty;
+                (spot_pnl, futures_pnl)
+            }
+            _ => (0.0, 0.0),
+        };
+
+        let total_pnl = spot_pnl + futures_pnl;
+        let total_pnl_bps = if pair.spot_order_qty > 0.0 {
+            (total_pnl / (spot_price * pair.spot_order_qty)) * 10000.0
+        } else {
+            0.0
+        };
+
+        info!("=== Position Closed - PnL Summary ===");
+        info!("Direction: {:?}, Symbol: {}", state.dir, self.params.symbol);
+        info!(
+            "Entry Basis: {:.2} bps, Exit Basis: {:.2} bps, Basis Change: {:.2} bps",
+            open_basis, close_basis, basis_change
+        );
+        info!(
+            "Entry Prices: Spot {:.2}, Futures {:.2}",
+            open_spot_price, open_futures_price
+        );
+        info!(
+            "Exit Prices: Spot {:.2}, Futures {:.2}",
+            spot_price, futures_mark
+        );
+        info!(
+            "Quantities: Spot {:.8}, Futures {:.8}",
+            pair.spot_order_qty, pair.fut_order_qty
+        );
+        info!(
+            "PnL Breakdown: Spot {:.6} USDT, Futures {:.6} USDT",
+            spot_pnl, futures_pnl
+        );
+        info!(
+            "Total PnL: {:.6} USDT ({:.2} bps)",
+            total_pnl, total_pnl_bps
+        );
+        info!("Basis-based PnL Estimate: {:.6} USDT", basis_pnl_usdt);
     }
 
     /// 명목가에서 수량 계산 (스팟 기준)
@@ -442,9 +530,11 @@ impl IntraBasisArbitrageStrategy {
 
             let basis_bps = self.compute_basis_bps(spot_price, futures_mark);
 
-            info!(
+            trace!(
                 "Spot: {:.2}, Futures: {:.2}, Basis: {:.2} bps",
-                spot_price, futures_mark, basis_bps
+                spot_price,
+                futures_mark,
+                basis_bps
             );
 
             if state.open {
@@ -468,6 +558,9 @@ impl IntraBasisArbitrageStrategy {
 
                     match result {
                         Ok((futures_order, spot_order)) => {
+                            // 포지션 이득 계산 및 로깅
+                            self.log_position_pnl(&state, spot_price, futures_mark, basis_bps);
+
                             let actions = serde_json::json!({
                                 "futures": futures_order,
                                 "spot": spot_order,

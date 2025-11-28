@@ -5,7 +5,7 @@ use hmac::{Hmac, Mac};
 use serde::Deserialize;
 use serde_json::Value;
 use sha2::Sha512;
-use tracing::warn;
+use tracing::{info, warn};
 
 use exchanges::{
     bithumb::{self, BithumbClient, BASE_URL},
@@ -150,6 +150,8 @@ impl BithumbTrader {
         let signature = self.sign_request(endpoint, params, &nonce)?;
         let url = format!("{}{}", BASE_URL, endpoint);
 
+        info!("post_private url: {}", url);
+
         let response = self
             .http
             .post(&url)
@@ -164,6 +166,8 @@ impl BithumbTrader {
 
         let status = response.status();
         let body = response.text().await?;
+
+        info!("post_private response: {}", body);
 
         if !status.is_success() {
             return Err(ExchangeError::Other(format!(
