@@ -347,6 +347,18 @@ impl IntraBasisArbitrageStrategy {
             )));
         }
 
+        // 수수료 정보 가져오기
+        let fee = self
+            .trader
+            .spot_client
+            .get_trade_fee_for_symbol(&self.params.symbol)
+            .await?;
+
+        let spot_fee_rate = match self.params.mode {
+            StrategyMode::Reverse => fee.taker,
+            _ => fee.maker,
+        };
+
         // 스팟 매도
         let spot_order = self
             .trader
@@ -359,7 +371,22 @@ impl IntraBasisArbitrageStrategy {
             .place_futures_order(&self.params.symbol, "BUY", final_qty, false)
             .await?;
 
-        Ok((spot_order, futures_order, todo!()))
+        // HedgedPair 생성
+        // 스팟 매도 시: 매도 수량 * (1 - fee_rate) = 실제 받는 USDT 수량
+        // 선물 롱: final_qty
+        // delta_est = (매도 후 받는 USDT를 base로 환산) - 선물 수량
+        // 간단히: spot_net_qty_est = final_qty * (1 - fee_rate) (매도 후 받는 base 수량)
+        let spot_net_qty_est = final_qty * (1.0 - spot_fee_rate);
+        let delta_est = spot_net_qty_est - final_qty;
+
+        let pair = HedgedPair {
+            spot_order_qty: final_qty,
+            fut_order_qty: final_qty,
+            spot_net_qty_est,
+            delta_est,
+        };
+
+        Ok((spot_order, futures_order, pair))
     }
 
     /// Reverse 포지션 클로즈: 스팟 매수 + 선물 매도 (reduceOnly)
@@ -489,6 +516,13 @@ impl IntraBasisArbitrageStrategy {
             )
             .await?;
 
+        // WebSocket 리스너 시작 (백그라운드에서 실시간 가격 수신)
+        info!("Starting WebSocket listeners for real-time price updates...");
+        self.trader.start_websocket_listener(&self.params.symbol);
+
+        // WebSocket 연결이 안정화될 때까지 잠시 대기
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
         // 상태 로드
         let mut state = ArbitrageState::read()?;
         if state.symbol != self.params.symbol {
@@ -507,7 +541,7 @@ impl IntraBasisArbitrageStrategy {
         );
 
         loop {
-            // tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            tokio::time::sleep(tokio::time::Duration::from_micros(100)).await;
 
             // 가격 조회
             let spot_price = self

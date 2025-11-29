@@ -4,9 +4,9 @@ use chrono::Local;
 use color_eyre::eyre;
 use exchanges::BinanceClient;
 use structopt::StructOpt;
-use tracing::info;
+use tracing::{info, level_filters::LevelFilter};
 use tracing_appender::non_blocking;
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
 mod explore;
 
