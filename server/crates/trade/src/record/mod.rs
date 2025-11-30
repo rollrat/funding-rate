@@ -7,7 +7,7 @@ pub mod sqlite;
 pub use global::*;
 pub use helpers::*;
 pub use interfaces::{
-    PositionRecord, PositionRecordRepository, RecordError, StoredPositionRecord,
-    StoredTradeRecord, TradeRecord, TradeRecordRepository, TradeSide, TradeType, MarketType,
+    MarketType, PositionRecord, PositionRecordRepository, RecordError, StoredPositionRecord,
+    StoredTradeRecord, TradeRecord, TradeRecordRepository, TradeSide, TradeType,
 };
 pub use sqlite::{SqlitePositionRecordRepository, SqliteTradeRecordRepository};

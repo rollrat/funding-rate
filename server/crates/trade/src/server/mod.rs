@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use axum::{response::IntoResponse, routing::get, Json, Router};
+use axum::{Json, Router, response::IntoResponse, routing::get};
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 
@@ -95,4 +95,3 @@ async fn position_records_handler() -> impl IntoResponse {
         }
     }
 }
-
