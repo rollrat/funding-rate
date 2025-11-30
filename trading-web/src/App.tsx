@@ -58,6 +58,11 @@ function App() {
   );
   const [selectedTradeRecord, setSelectedTradeRecord] =
     useState<TradeRecord | null>(null);
+  const [positionPair, setPositionPair] = useState<{
+    open: PositionRecord;
+    close: PositionRecord;
+    trades: TradeRecord[];
+  } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeBarRef = useRef<HTMLDivElement>(null);
   const startYRef = useRef<number>(0);
@@ -258,6 +263,103 @@ function App() {
     return filtered;
   }, [selectedPositionId, positionRecords, tradeRecords]);
 
+  // 포지션 더블클릭 시 OPEN~CLOSE 쌍 찾기
+  const handlePositionDoubleClick = (positionId: number) => {
+    const clickedPosition = positionRecords.find((p) => p.id === positionId);
+    if (!clickedPosition) return;
+
+    // 같은 bot_name, carry, symbol 조합의 포지션들 찾기
+    const sameGroupPositions = positionRecords
+      .filter(
+        (p) =>
+          p.bot_name === clickedPosition.bot_name &&
+          p.carry === clickedPosition.carry &&
+          p.symbol === clickedPosition.symbol
+      )
+      .sort((a, b) => {
+        return (
+          new Date(a.executed_at).getTime() - new Date(b.executed_at).getTime()
+        );
+      });
+
+    let openPosition: PositionRecord | null = null;
+    let closePosition: PositionRecord | null = null;
+
+    if (clickedPosition.action === "CLOSE") {
+      // CLOSE를 더블클릭한 경우: 앞선 OPEN 찾기
+      const clickedIndex = sameGroupPositions.findIndex(
+        (p) => p.id === positionId
+      );
+      if (clickedIndex > 0) {
+        // 앞에서부터 역순으로 OPEN 찾기
+        for (let i = clickedIndex - 1; i >= 0; i--) {
+          if (sameGroupPositions[i].action === "OPEN") {
+            openPosition = sameGroupPositions[i];
+            closePosition = clickedPosition;
+            break;
+          }
+        }
+      }
+    } else if (clickedPosition.action === "OPEN") {
+      // OPEN을 더블클릭한 경우: 다음 CLOSE 찾기
+      const clickedIndex = sameGroupPositions.findIndex(
+        (p) => p.id === positionId
+      );
+      if (clickedIndex < sameGroupPositions.length - 1) {
+        // 뒤에서부터 CLOSE 찾기
+        for (let i = clickedIndex + 1; i < sameGroupPositions.length; i++) {
+          if (sameGroupPositions[i].action === "CLOSE") {
+            openPosition = clickedPosition;
+            closePosition = sameGroupPositions[i];
+            break;
+          }
+        }
+      }
+    }
+
+    if (openPosition && closePosition) {
+      // OPEN 실행 시간 이전부터 CLOSE 실행 시간 이전까지의 거래 기록 필터링
+      // (단일 포지션 클릭 시와 동일한 로직)
+
+      // OPEN 포지션의 이전 포지션 찾기
+      const openIndex = sameGroupPositions.findIndex(
+        (p) => p.id === openPosition.id
+      );
+      const openStartTime =
+        openIndex > 0
+          ? new Date(sameGroupPositions[openIndex - 1].executed_at).getTime()
+          : 0;
+      const openEndTime = new Date(openPosition.executed_at).getTime();
+
+      // CLOSE 포지션의 이전 포지션 찾기
+      const closeIndex = sameGroupPositions.findIndex(
+        (p) => p.id === closePosition.id
+      );
+      const closeStartTime =
+        closeIndex > 0
+          ? new Date(sameGroupPositions[closeIndex - 1].executed_at).getTime()
+          : 0;
+      const closeEndTime = new Date(closePosition.executed_at).getTime();
+
+      // OPEN 범위와 CLOSE 범위의 거래 기록을 모두 포함
+      const relatedTrades = tradeRecords.filter((trade) => {
+        const tradeTime = new Date(trade.executed_at).getTime();
+        // OPEN 범위: openStartTime <= tradeTime < openEndTime
+        // CLOSE 범위: closeStartTime <= tradeTime < closeEndTime
+        return (
+          (tradeTime >= openStartTime && tradeTime < openEndTime) ||
+          (tradeTime >= closeStartTime && tradeTime < closeEndTime)
+        );
+      });
+
+      setPositionPair({
+        open: openPosition,
+        close: closePosition,
+        trades: relatedTrades,
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <Container
@@ -421,6 +523,7 @@ function App() {
                     records={positionRecords}
                     selectedPositionId={selectedPositionId}
                     onPositionClick={setSelectedPositionId}
+                    onPositionDoubleClick={handlePositionDoubleClick}
                   />
                 </div>
                 {selectedPositionId && relatedTradeRecords.length > 0 && (
@@ -515,6 +618,7 @@ function App() {
           </Text>
         }
         size="70%"
+        zIndex={300}
         styles={{
           content: {
             maxHeight: "90vh",
@@ -787,6 +891,268 @@ function App() {
                   )}
               </Grid.Col>
             </Grid>
+          </ScrollArea>
+        )}
+      </Modal>
+
+      {/* 포지션 쌍 (OPEN~CLOSE) 다이얼로그 */}
+      <Modal
+        opened={positionPair !== null}
+        onClose={() => setPositionPair(null)}
+        title={
+          <Text fw={700} size="xl">
+            포지션 쌍 상세 정보 (OPEN ~ CLOSE)
+          </Text>
+        }
+        size="90%"
+        zIndex={200}
+        styles={{
+          content: {
+            maxHeight: "90vh",
+          },
+          body: {
+            padding: "24px",
+          },
+        }}
+      >
+        {positionPair && (
+          <ScrollArea h="calc(90vh - 120px)">
+            <Stack gap="xl">
+              {/* OPEN 포지션 정보 */}
+              <Paper p="lg" withBorder shadow="sm">
+                <Text fw={700} size="lg" mb="md" c="green">
+                  OPEN 포지션
+                </Text>
+                <Grid gutter="md">
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        실행 시간
+                      </Text>
+                      <Text size="sm" fw={500}>
+                        {new Date(positionPair.open.executed_at).toLocaleString(
+                          "ko-KR"
+                        )}
+                      </Text>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        봇 이름
+                      </Text>
+                      <Badge variant="light" color="purple" size="md">
+                        {positionPair.open.bot_name}
+                      </Badge>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        심볼
+                      </Text>
+                      <Text size="md" fw={600}>
+                        {positionPair.open.symbol}
+                      </Text>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        방향
+                      </Text>
+                      <Badge
+                        variant="light"
+                        color={
+                          positionPair.open.carry === "CARRY"
+                            ? "blue"
+                            : "orange"
+                        }
+                        size="md"
+                      >
+                        {positionPair.open.carry}
+                      </Badge>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        스팟 가격
+                      </Text>
+                      <Text size="md" fw={600}>
+                        {positionPair.open.spot_price.toLocaleString("ko-KR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 8,
+                        })}
+                      </Text>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        선물 마크
+                      </Text>
+                      <Text size="md" fw={600}>
+                        {positionPair.open.futures_mark.toLocaleString(
+                          "ko-KR",
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 8,
+                          }
+                        )}
+                      </Text>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={6}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        매수 거래소
+                      </Text>
+                      <Badge variant="light" color="cyan" size="md">
+                        {positionPair.open.buy_exchange}
+                      </Badge>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={6}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        매도 거래소
+                      </Text>
+                      <Badge variant="light" color="pink" size="md">
+                        {positionPair.open.sell_exchange}
+                      </Badge>
+                    </Stack>
+                  </Grid.Col>
+                </Grid>
+              </Paper>
+
+              {/* CLOSE 포지션 정보 */}
+              <Paper p="lg" withBorder shadow="sm">
+                <Text fw={700} size="lg" mb="md" c="red">
+                  CLOSE 포지션
+                </Text>
+                <Grid gutter="md">
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        실행 시간
+                      </Text>
+                      <Text size="sm" fw={500}>
+                        {new Date(
+                          positionPair.close.executed_at
+                        ).toLocaleString("ko-KR")}
+                      </Text>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        봇 이름
+                      </Text>
+                      <Badge variant="light" color="purple" size="md">
+                        {positionPair.close.bot_name}
+                      </Badge>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        심볼
+                      </Text>
+                      <Text size="md" fw={600}>
+                        {positionPair.close.symbol}
+                      </Text>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        방향
+                      </Text>
+                      <Badge
+                        variant="light"
+                        color={
+                          positionPair.close.carry === "CARRY"
+                            ? "blue"
+                            : "orange"
+                        }
+                        size="md"
+                      >
+                        {positionPair.close.carry}
+                      </Badge>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        스팟 가격
+                      </Text>
+                      <Text size="md" fw={600}>
+                        {positionPair.close.spot_price.toLocaleString("ko-KR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 8,
+                        })}
+                      </Text>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        선물 마크
+                      </Text>
+                      <Text size="md" fw={600}>
+                        {positionPair.close.futures_mark.toLocaleString(
+                          "ko-KR",
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 8,
+                          }
+                        )}
+                      </Text>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={6}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        매수 거래소
+                      </Text>
+                      <Badge variant="light" color="cyan" size="md">
+                        {positionPair.close.buy_exchange}
+                      </Badge>
+                    </Stack>
+                  </Grid.Col>
+                  <Grid.Col span={6}>
+                    <Stack gap={4}>
+                      <Text size="sm" c="dimmed">
+                        매도 거래소
+                      </Text>
+                      <Badge variant="light" color="pink" size="md">
+                        {positionPair.close.sell_exchange}
+                      </Badge>
+                    </Stack>
+                  </Grid.Col>
+                </Grid>
+              </Paper>
+
+              {/* 관련 거래 기록 */}
+              <Paper p="lg" withBorder shadow="sm">
+                <Text fw={700} size="lg" mb="md">
+                  관련 거래 기록 ({positionPair.trades.length}건)
+                </Text>
+                {positionPair.trades.length > 0 ? (
+                  <div style={{ maxHeight: "400px", overflow: "auto" }}>
+                    <TradeTable
+                      records={positionPair.trades}
+                      onRecordDoubleClick={setSelectedTradeRecord}
+                    />
+                  </div>
+                ) : (
+                  <Text c="dimmed" ta="center" py="xl">
+                    관련 거래 기록이 없습니다
+                  </Text>
+                )}
+              </Paper>
+            </Stack>
           </ScrollArea>
         )}
       </Modal>

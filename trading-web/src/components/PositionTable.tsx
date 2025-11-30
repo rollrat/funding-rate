@@ -5,17 +5,20 @@ interface PositionTableProps {
   records: PositionRecord[];
   selectedPositionId: number | null;
   onPositionClick: (positionId: number) => void;
+  onPositionDoubleClick?: (positionId: number) => void;
 }
 
 export default function PositionTable({
   records,
   selectedPositionId,
   onPositionClick,
+  onPositionDoubleClick,
 }: PositionTableProps) {
   const rows = records.map((record) => (
     <Table.Tr
       key={record.id}
       onClick={() => onPositionClick(record.id)}
+      onDoubleClick={() => onPositionDoubleClick?.(record.id)}
       style={{
         cursor: "pointer",
         backgroundColor:
